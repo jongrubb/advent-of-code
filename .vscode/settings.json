@@ -1,0 +1,52 @@
+{
+	"explorer.confirmDelete": false,
+	"files.autoSave": "onFocusChange",
+	"todo-tree.general.tags": [
+		"BUG",
+		"HACK",
+		"FIXME",
+		"TODO",
+		"XXX",
+		"[ ]",
+		"[x]"
+	],
+	"debug.allowBreakpointsEverywhere": true,
+	"emmet.showSuggestionsAsSnippets": true,
+	"[mdx]": {
+		"editor.wordWrap": "wordWrapColumn",
+		"editor.wordWrapColumn": 120
+	},
+	"eslint.validate": [
+		"javascript",
+		"javascriptreact",
+		"typescript",
+		"json",
+		"markdown"
+	],
+	"eslint.packageManager": "pnpm",
+	"editor.formatOnSave": true,
+	"editor.codeActionsOnSave": {
+		"source.fixAll.eslint": true
+	},
+	"eslint.workingDirectories": [
+		{
+			"mode": "auto"
+		}
+	],
+	"todo-tree.regex.regex": "(//|#|<!--|;|/\\*|^|^\\s*(-|\\d+.))\\s*($TAGS)",
+	"files.exclude": {
+		"**/.git": true,
+		"**/.svn": true,
+		"**/.hg": true,
+		"**/CVS": true,
+		"**/.DS_Store": true,
+		"**/*.js": {
+			"when": "$(basename).ts"
+		},
+		"**/**.js": {
+			"when": "$(basename).tsx"
+		}
+	},
+	"editor.snippetSuggestions": "bottom",
+	"jest.autoRun": "off"
+}

@@ -1,0 +1,11 @@
+// https://adventofcode.com/2021/day/#{dayNumber}
+
+import {readLine} from '../common/readInput';
+
+void (async() => {
+
+  await readLine(#{dayNumber}, (line) => {
+    
+  });
+
+})();
