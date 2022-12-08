@@ -5,17 +5,13 @@ import { readLine } from '../common/readInput'
 
 class Plot extends Grid<number> {
   private getTreesToEdge (fromRowNumber: number, fromColumnNumber: number, getNextCell: ([rowNumber, columnNumber]: [number, number]) => [rowNumber: number, columnNumber: number]): Array<GridCell<number>> {
-    let nextCell = getNextCell([fromRowNumber, fromColumnNumber])
-    let rowNumber = nextCell[0]
-    let columnNumber = nextCell[1]
+    let [rowNumber, columnNumber] = getNextCell([fromRowNumber, fromColumnNumber])
 
     const treesToEdge: Array<GridCell<number>> = []
 
     while (this.doesRowExist(rowNumber) && this.doesColumnExist(columnNumber)) {
-      treesToEdge.push(this.getItem(rowNumber, columnNumber))
-      nextCell = getNextCell([rowNumber, columnNumber])
-      rowNumber = nextCell[0]
-      columnNumber = nextCell[1]
+      treesToEdge.push(this.getItem(rowNumber, columnNumber));
+      [rowNumber, columnNumber] = getNextCell([rowNumber, columnNumber])
     }
 
     return treesToEdge
