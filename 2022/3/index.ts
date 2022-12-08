@@ -1,87 +1,87 @@
 // https://adventofcode.com/2022/day/3
 
-import { readLine } from '../common/readInput'
-import { unique } from '../common/utils'
+import { readLine } from '../common/readInput';
+import { unique } from '../common/utils';
 
-const lowerCase = 'abcdefghijklmnopqrstuvwxyz'
+const lowerCase = 'abcdefghijklmnopqrstuvwxyz';
 
-const lowerCaseMap: Record<string, number> = {}
+const lowerCaseMap: Record<string, number> = {};
 
 lowerCase.split('').forEach((c, i) => {
-  lowerCaseMap[c] = i + 1
-})
+  lowerCaseMap[c] = i + 1;
+});
 
-console.log(lowerCaseMap)
+console.log(lowerCaseMap);
 
 function findMatchingChar (lines: string[]): string {
-  const allLines = lines.reduce((previousValue, currentValue) => previousValue + currentValue, '')
+  const allLines = lines.reduce((previousValue, currentValue) => previousValue + currentValue, '');
 
-  const chars = unique(allLines.split(''))
+  const chars = unique(allLines.split(''));
 
-  const [,...restLines] = lines
+  const [,...restLines] = lines;
 
-  let matchingChar = ''
+  let matchingChar = '';
 
   for (const char of chars) {
-    let allLinesMatch = true
+    let allLinesMatch = true;
     for (const l of restLines) {
       if (!l.includes(char)) {
-        allLinesMatch = false
-        break
+        allLinesMatch = false;
+        break;
       }
     }
 
     if (allLinesMatch) {
-      matchingChar = char
-      break
+      matchingChar = char;
+      break;
     }
   }
 
   if (matchingChar === '') {
-    console.warn(lines)
-    throw new Error('Could not find matching char!')
+    console.warn(lines);
+    throw new Error('Could not find matching char!');
   }
 
-  return matchingChar
+  return matchingChar;
 }
 
 function getCharValue (c: string): number {
   if (c.match(/[a-z]/) != null) {
-    return lowerCaseMap[c]
+    return lowerCaseMap[c];
   } else {
-    return lowerCaseMap[c.toLowerCase()] + 26
+    return lowerCaseMap[c.toLowerCase()] + 26;
   }
 }
 
 void (async () => {
-  let sum = 0
+  let sum = 0;
   await readLine(3, (line) => {
-    const firstHalf = line.substring(0, line.length / 2)
-    const secondHalf = line.substring(line.length / 2, line.length)
+    const firstHalf = line.substring(0, line.length / 2);
+    const secondHalf = line.substring(line.length / 2, line.length);
 
-    const matchingChar = findMatchingChar([firstHalf, secondHalf])
+    const matchingChar = findMatchingChar([firstHalf, secondHalf]);
 
-    sum += getCharValue(matchingChar)
-  })
+    sum += getCharValue(matchingChar);
+  });
 
-  console.log('part1', sum)
-})()
+  console.log('part1', sum);
+})();
 
 void (async () => {
-  let sum = 0
+  let sum = 0;
 
-  let lines: string[] = []
+  let lines: string[] = [];
 
   await readLine(3, (line, lineNumber) => {
-    lines.push(line)
+    lines.push(line);
     if ((lineNumber + 1) % 3 === 0) {
-      const matchingChar = findMatchingChar(lines)
+      const matchingChar = findMatchingChar(lines);
 
-      sum += getCharValue(matchingChar)
+      sum += getCharValue(matchingChar);
 
-      lines = []
+      lines = [];
     }
-  })
+  });
 
-  console.log('part2', sum)
-})()
+  console.log('part2', sum);
+})();
