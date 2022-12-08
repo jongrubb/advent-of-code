@@ -1,41 +1,41 @@
 // https://adventofcode.com/2022/day/8
 
+import { Grid, GridCell } from '../common/Grid'
 import { readLine } from '../common/readInput'
 
-function getCell (plot: number[][], rowNumber: number, columnNumber: number): number | null {
-  if (rowNumber < 0 || rowNumber >= plot.length) {
-    return null
+class Plot extends Grid<number> {
+  private getTreesToEdge (fromRowNumber: number, fromColumnNumber: number, getNextCell: ([rowNumber, columnNumber]: [number, number]) => [rowNumber: number, columnNumber: number]): Array<GridCell<number>> {
+    let nextCell = getNextCell([fromRowNumber, fromColumnNumber])
+    let rowNumber = nextCell[0]
+    let columnNumber = nextCell[1]
+
+    const treesToEdge: Array<GridCell<number>> = []
+
+    while (this.doesRowExist(rowNumber) && this.doesColumnExist(columnNumber)) {
+      treesToEdge.push(this.getItem(rowNumber, columnNumber))
+      nextCell = getNextCell([rowNumber, columnNumber])
+      rowNumber = nextCell[0]
+      columnNumber = nextCell[1]
+    }
+
+    return treesToEdge
   }
 
-  const row = plot[rowNumber]
-
-  if (columnNumber < 0 || columnNumber >= row.length) {
-    return null
+  public getAllTreesToEdge (fromRowNumber: number, fromColumnNumber: number): { top: Array<GridCell<number>>, bottom: Array<GridCell<number>>, right: Array<GridCell<number>>, left: Array<GridCell<number>> } {
+    return {
+      top: this.getTreesToEdge(fromRowNumber, fromColumnNumber, ([rowNumber, columnNumber]) => [rowNumber + 1, columnNumber]),
+      bottom: this.getTreesToEdge(fromRowNumber, fromColumnNumber, ([rowNumber, columnNumber]) => [rowNumber - 1, columnNumber]),
+      right: this.getTreesToEdge(fromRowNumber, fromColumnNumber, ([rowNumber, columnNumber]) => [rowNumber, columnNumber + 1]),
+      left: this.getTreesToEdge(fromRowNumber, fromColumnNumber, ([rowNumber, columnNumber]) => [rowNumber, columnNumber - 1])
+    }
   }
-
-  return row[columnNumber]
 }
 
-interface TreeInfo {rowNumber: number, columnNumber: number, value: number | null}
-
-function getAllTreesToEdges (plot: number[][], rowNumber: number, columnNumber: number, nextCell: (rowNumber: number, columnNumber: number) => TreeInfo): number[] {
-  const trees: number[] = []
-
-  let treeInfo: TreeInfo = nextCell(rowNumber, columnNumber)
-
-  while (treeInfo?.value !== null) {
-    trees.push(treeInfo.value)
-    treeInfo = nextCell(treeInfo.rowNumber, treeInfo.columnNumber)
-  }
-
-  return trees
-}
-
-function calculateTreeSeeingScore (treeValue: number, trees: number[]): number {
+function calculateTreeSeeingScore (rootTreeValue: number, treesToEdge: Array<GridCell<number>>): number {
   let score = 0
-  for (const tree of trees) {
+  for (const { item } of treesToEdge) {
     score++
-    if (treeValue - tree <= 0) {
+    if (rootTreeValue - item <= 0) {
       break
     }
   }
@@ -43,50 +43,28 @@ function calculateTreeSeeingScore (treeValue: number, trees: number[]): number {
   return score
 }
 
-function * plotGenerator (plot: number[][] = []): Generator<{
-  value: number
-  rowNumber: number
-  columnNumber: number
-}> {
-  for (let i = 0; i < plot.length; i++) {
-    const row = plot[i]
-    for (let j = 0; j < row.length; j++) {
-      yield {
-        value: row[j],
-        rowNumber: i,
-        columnNumber: j
-      }
-    }
-  }
-}
-
 void (async () => {
-  const plot: number[][] = []
+  const plot = new Plot()
 
   await readLine(8, (line) => {
-    plot.push(line.split('').map(s => parseInt(s, 10)))
+    plot.addRow(line.split('').map(s => parseInt(s, 10)))
   })
 
   let visibleTrees = 0
   let maxViewingDistance = 0
 
-  for (const { value, rowNumber, columnNumber } of plotGenerator(plot)) {
-    const treesAround = [
-      getAllTreesToEdges(plot, rowNumber, columnNumber, (r, c) => ({ rowNumber: r, columnNumber: c + 1, value: getCell(plot, r, c + 1) })),
-      getAllTreesToEdges(plot, rowNumber, columnNumber, (r, c) => ({ rowNumber: r, columnNumber: c - 1, value: getCell(plot, r, c - 1) })),
-      getAllTreesToEdges(plot, rowNumber, columnNumber, (r, c) => ({ rowNumber: r + 1, columnNumber: c, value: getCell(plot, r + 1, c) })),
-      getAllTreesToEdges(plot, rowNumber, columnNumber, (r, c) => ({ rowNumber: r - 1, columnNumber: c, value: getCell(plot, r - 1, c) }))
-    ]
+  for (const { item: treeValue, rowNumber, columnNumber } of plot.iterateItemsByRow()) {
+    const allTreeEdges = plot.getAllTreesToEdge(rowNumber, columnNumber)
 
-    if (treesAround.some((trees) => trees.filter((t) => t >= value).length === 0)) {
+    if (Object.entries(allTreeEdges).some(([,trees]) => trees.filter((t) => t.item >= treeValue).length === 0)) {
       visibleTrees++
     }
 
-    const score = calculateTreeSeeingScore(value, treesAround[0]) * calculateTreeSeeingScore(value, treesAround[1]) * calculateTreeSeeingScore(value, treesAround[2]) * calculateTreeSeeingScore(value, treesAround[3])
+    const score = calculateTreeSeeingScore(treeValue, allTreeEdges.top) * calculateTreeSeeingScore(treeValue, allTreeEdges.bottom) * calculateTreeSeeingScore(treeValue, allTreeEdges.left) * calculateTreeSeeingScore(treeValue, allTreeEdges.right)
     if (score > maxViewingDistance) {
       maxViewingDistance = score
     }
   }
 
-  console.log(plot, visibleTrees, maxViewingDistance)
+  console.log(visibleTrees, maxViewingDistance)
 })()
