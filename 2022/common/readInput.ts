@@ -18,3 +18,9 @@ export async function readLine (dayNumber: number, onLineRead: (line: string, li
     lineNumber++;
   }
 }
+
+export function readAll (dayNumber: number): string {
+  const path = getInputFilePath(dayNumber);
+
+  return fs.readFileSync(path).toString();
+}
