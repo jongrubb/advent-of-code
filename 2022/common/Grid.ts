@@ -31,7 +31,7 @@ export class Grid<T> {
   public getItem (rowNumber: number, columnNumber: number): GridCell<T> {
     const row = this.getRow(rowNumber);
 
-    if (this.gridByRow[columnNumber] === undefined) {
+    if (row[columnNumber] === undefined) {
       throw new Error(`Column ${columnNumber} does not exist in row ${rowNumber}`);
     }
 
