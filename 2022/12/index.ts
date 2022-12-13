@@ -1,124 +1,139 @@
 // https://adventofcode.com/2022/day/12
 
-import { fail } from 'assert';
 import { Grid, GridCell } from '../common/Grid';
 import { readLine } from '../common/readInput';
+import { sortByProperty } from '../common/utils';
 
 const S = 'S'.charCodeAt(0);
 const E = 'E'.charCodeAt(0);
 
-function getCell (grid: Grid<number>, rowNumber: number, columnNumber: number): GridCell<number> | null {
-  try {
-    return grid.getItem(rowNumber, columnNumber);
-  } catch (err) {
-    return null;
-  }
-}
+interface Location {
+  neighbors: Location[]
+  value: number
+  steps: number | null
+  shortestFromLocation: Location | null
+};
 
-function resolveCellValue (cell: GridCell<number>): number {
-  if (cell.item === S) {
+function resolveLocationValue (location: Location): number {
+  if (location.value === S) {
     return 'a'.charCodeAt(0);
   }
-  if (cell.item === E) {
+  if (location.value === E) {
     return 'z'.charCodeAt(0);
   }
-  return cell.item;
+  return location.value;
 }
 
-function compileVisitedMapKey (cell: GridCell<number>): string {
-  return `${cell.rowNumber}|${cell.columnNumber}`;
+function canStitchLocation (baseLocation: Location, targetLocation: Location): boolean {
+  return resolveLocationValue(targetLocation) - resolveLocationValue(baseLocation) <= 1;
 }
 
-function canProgressToCell (currentCell: GridCell<number>, targetCell: GridCell<number> | null, visitedMap: Record<string, boolean>, failedCellMap: Record<string, boolean>): boolean {
-  if (targetCell === null) {
-    return false;
+function stitchLocations (grid: Grid<Location>): void {
+  for (const location of grid.iterateItemsByRow()) {
+    const cellAbove = grid.getCell(location.rowNumber + 1, location.columnNumber);
+    const cellBelow = grid.getCell(location.rowNumber - 1, location.columnNumber);
+    const cellLeft = grid.getCell(location.rowNumber, location.columnNumber - 1);
+    const cellRight = grid.getCell(location.rowNumber, location.columnNumber + 1);
+
+    if (cellAbove !== null) {
+      if (canStitchLocation(location.item, cellAbove.item)) {
+        location.item.neighbors.push(cellAbove.item);
+      }
+    }
+
+    if (cellBelow !== null) {
+      if (canStitchLocation(location.item, cellBelow.item)) {
+        location.item.neighbors.push(cellBelow.item);
+      }
+    }
+
+    if (cellLeft !== null) {
+      if (canStitchLocation(location.item, cellLeft.item)) {
+        location.item.neighbors.push(cellLeft.item);
+      }
+    }
+
+    if (cellRight !== null) {
+      if (canStitchLocation(location.item, cellRight.item)) {
+        location.item.neighbors.push(cellRight.item);
+      }
+    }
+
+    if (location.item.neighbors === undefined) {
+      console.log(location.item.neighbors, location.columnNumber, location.rowNumber);
+    }
   }
-
-  const currentCellValue = resolveCellValue(currentCell);
-  const targetCellValue = resolveCellValue(targetCell);
-
-  return !visitedMap[compileVisitedMapKey(targetCell)] && !failedCellMap[compileVisitedMapKey(targetCell)] && targetCellValue - currentCellValue <= 1;
 }
 
-function findMinPath (paths: Array<Array<GridCell<number>>>): Array<GridCell<number>> {
-  const minPathLength = Math.min(...paths.map(p => p.length));
+function backTrackLocations (l: Location): Location[] {
+  const locations: Location[] = [];
 
-  return paths.find(p => p.length === minPathLength) ?? [];
+  let currentLocation: Location | null = l;
+
+  while (currentLocation !== null) {
+    locations.unshift(currentLocation);
+    currentLocation = currentLocation.shortestFromLocation;
+  }
+
+  return locations;
 }
 
-function findEndingCell (grid: Grid<number>, currentCell: GridCell<number>, currentPath: Array<GridCell<number>>, visitedMap: Record<string, boolean>, failedCellMap: Record<string, boolean>, minPathFound = 0): Array<Array<GridCell<number>>> {
-  if (currentCell.item === E) {
-    return [[...currentPath]];
-  }
+function findMinPath (startingLocation: Location, endingLocation: Location): Location[] {
+  const processQueue: Location[] = [startingLocation];
+  startingLocation.steps = 0;
 
-  if (minPathFound !== 0 && currentPath.length >= minPathFound) {
-    return [];
-  }
+  while (processQueue.length > 0) {
+    const currentLocation = processQueue.shift();
 
-  const cellAbove = getCell(grid, currentCell.rowNumber + 1, currentCell.columnNumber);
-  const cellBelow = getCell(grid, currentCell.rowNumber - 1, currentCell.columnNumber);
-  const cellLeft = getCell(grid, currentCell.rowNumber, currentCell.columnNumber - 1);
-  const cellRight = getCell(grid, currentCell.rowNumber, currentCell.columnNumber + 1);
-
-  let foundPaths: Array<Array<GridCell<number>>> = [];
-  const currentMinPath = minPathFound;
-
-  if (canProgressToCell(currentCell, cellRight, visitedMap, failedCellMap) && cellRight !== null) {
-    const newFoundPaths = findEndingCell(grid, cellRight, [...currentPath, cellRight], { ...visitedMap, [compileVisitedMapKey(cellRight)]: true }, failedCellMap, currentMinPath);
-    if (newFoundPaths.length > 0) {
-      foundPaths.push(...newFoundPaths);
-      const minPath = findMinPath(foundPaths);
-      foundPaths = [minPath];
+    if (currentLocation === undefined) {
+      throw new Error('nothing to process!');
     }
-  }
-  if (canProgressToCell(currentCell, cellAbove, visitedMap, failedCellMap) && cellAbove !== null) {
-    const newFoundPaths = findEndingCell(grid, cellAbove, [...currentPath, cellAbove], { ...visitedMap, [compileVisitedMapKey(cellAbove)]: true }, failedCellMap, currentMinPath);
-    if (newFoundPaths.length > 0) {
-      foundPaths.push(...newFoundPaths);
-      const minPath = findMinPath(foundPaths);
-      foundPaths = [minPath];
+
+    if (currentLocation.steps === null) {
+      throw new Error(`Location ${currentLocation.value} is expected to be defined`);
     }
-  }
-  if (canProgressToCell(currentCell, cellBelow, visitedMap, failedCellMap) && cellBelow !== null) {
-    const newFoundPaths = findEndingCell(grid, cellBelow, [...currentPath, cellBelow], { ...visitedMap, [compileVisitedMapKey(cellBelow)]: true }, failedCellMap, currentMinPath);
-    if (newFoundPaths.length > 0) {
-      foundPaths.push(...newFoundPaths);
-      const minPath = findMinPath(foundPaths);
-      foundPaths = [minPath];
-    }
-  }
-  if (canProgressToCell(currentCell, cellLeft, visitedMap, failedCellMap) && cellLeft !== null) {
-    const newFoundPaths = findEndingCell(grid, cellLeft, [...currentPath, cellLeft], { ...visitedMap, [compileVisitedMapKey(cellLeft)]: true }, failedCellMap, currentMinPath);
-    if (newFoundPaths.length > 0) {
-      foundPaths.push(...newFoundPaths);
-      const minPath = findMinPath(foundPaths);
-      foundPaths = [minPath];
-    }
+
+    const newNeighborSteps = currentLocation.steps + 1;
+
+    currentLocation.neighbors.forEach((neighbor) => {
+      if (neighbor.steps === null || newNeighborSteps < neighbor.steps) {
+        neighbor.steps = newNeighborSteps;
+        neighbor.shortestFromLocation = currentLocation;
+        processQueue.push(neighbor);
+      }
+    });
+
+    processQueue.sort((a, b) => sortByProperty(a, b, (x) => x.steps));
   }
 
-  if (foundPaths.length === 0) {
-    failedCellMap[compileVisitedMapKey(currentCell)] = true;
+  if (endingLocation.shortestFromLocation === null) {
+    throw new Error('could not find ending location from starting location');
   }
 
-  return foundPaths;
+  return backTrackLocations(endingLocation);
+}
+
+function resetGrid (grid: Grid<Location>): void {
+  for (const cell of grid.iterateItemsByRow()) {
+    cell.item.steps = null;
+    cell.item.shortestFromLocation = null;
+  }
 }
 
 void (async () => {
-  const grid = new Grid<number>();
-  let startingCell: GridCell<number> | null = null;
-  let endingCell: GridCell<number> | null = null;
+  const grid = new Grid<Location>();
+  let startingCell: GridCell<Location> | null = null;
+  let endingCell: GridCell<Location> | null = null;
   await readLine(12, (line, lineNumber) => {
-    const locations = line.split('').map(x => x.charCodeAt(0));
+    const locations: Location[] = line.split('').map(x => ({ value: x.charCodeAt(0), neighbors: [], steps: null, shortestFromLocation: null }));
 
     grid.addRow(locations);
 
-    if (locations.includes(S)) {
-      startingCell = grid.getItem(lineNumber, locations.indexOf(S));
-      console.log(startingCell, String.fromCharCode(startingCell.item));
+    if (locations.find(l => l.value === S) !== undefined) {
+      startingCell = grid.getItem(lineNumber, locations.findIndex(l => l.value === S));
     }
-    if (locations.includes(E)) {
-      endingCell = grid.getItem(lineNumber, locations.indexOf(E));
-      console.log(endingCell, String.fromCharCode(endingCell.item));
+    if (locations.find(l => l.value === E) !== undefined) {
+      endingCell = grid.getItem(lineNumber, locations.findIndex(l => l.value === E));
     }
   });
 
@@ -126,15 +141,23 @@ void (async () => {
     throw new Error('could not find starting or ending cell');
   }
 
-  const paths = findEndingCell(grid, startingCell, [], { [compileVisitedMapKey(startingCell)]: true }, {});
+  stitchLocations(grid);
+  const minPath = findMinPath((startingCell as GridCell<Location>).item, (endingCell as GridCell<Location>).item);
 
-  console.log('total paths found', paths.length);
+  console.log(minPath.length - 1);
 
-  const minPath = findMinPath(paths);
-
-  minPath?.forEach(p => {
-    console.log(p.columnNumber, p.rowNumber, String.fromCharCode(p.item));
-  });
-
-  console.log(minPath.length);
+  console.log(Math.min(
+    ...Array.from(grid.iterateItemsByRow())
+      .filter(c => resolveLocationValue(c.item) === 'a'.charCodeAt(0))
+      .map(l => {
+        resetGrid(grid);
+        try {
+          return findMinPath(l.item, (endingCell as GridCell<Location>).item).length - 1;
+        } catch (err) {
+          // console.warn(err);
+          return null;
+        }
+      }
+      )
+      .filter<number>((x): x is number => x !== null)));
 })();
