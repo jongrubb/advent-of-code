@@ -40,6 +40,14 @@ export class Grid<T> {
     };
   }
 
+  public getCell (rowNumber: number, columnNumber: number): GridCell<T> | null {
+    try {
+      return this.getItem(rowNumber, columnNumber);
+    } catch (err) {
+      return null;
+    }
+  }
+
   private addAdjacentItems (arr: T[][], items: T[]): T[][] {
     const arrClone = [...arr];
 
