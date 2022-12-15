@@ -14,3 +14,5 @@ export function unique<T> (arr: T[], getUniqueByFunc?: (obj: T) => unknown): T[]
     return arr.findIndex(v => _func(v) === _func(value)) === index;
   });
 }
+
+export const wait = async (x: number): Promise<void> => await new Promise((resolve) => setTimeout(resolve, x));

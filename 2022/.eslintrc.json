@@ -16,6 +16,7 @@
         "react"
     ],
     "rules": {
-        "@typescript-eslint/semi": [2, "always"]
+        "@typescript-eslint/semi": [2, "always"],
+        "@typescript-eslint/strict-boolean-expressions": "off"
     }
 }
