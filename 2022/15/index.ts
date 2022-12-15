@@ -146,7 +146,6 @@ function buildLeftHeader (number: number, headerLength: number): string {
   return ' '.repeat(headerLength - xString.length) + xString;
 }
 
-// TODO switch this to write to file instead
 function printMap (map: Map): void {
   const minXLength = `${map.minX}`.length;
   const maxXLength = `${map.maxX}`.length;
@@ -162,7 +161,7 @@ function printMap (map: Map): void {
 
   const topHeaderSpacing = 5;
 
-  for (let i = map.minX + (topHeaderSpacing - map.minX % topHeaderSpacing); i < map.maxX + 1; i += 10) {
+  for (let i = map.minX + (topHeaderSpacing - map.minX % topHeaderSpacing); i < map.maxX + 1; i += topHeaderSpacing) {
     addNumberToTopHeader(topHeaderLines, i, map.minX, topHeaderLength);
   }
 
@@ -193,11 +192,23 @@ void (async () => {
     map.addSensor({ x: parseInt(match[1]), y: parseInt(match[2]) }, { x: parseInt(match[3]), y: parseInt(match[4]) });
   });
 
+  console.log('finished adding sensors');
+
   for (const sensor of Object.values(map.sensorMap)) {
     applySignalLocations(map, sensor);
   }
 
-  printMap(map);
+  console.log('finished applying signals');
 
-  console.log(Array(map.maxX - map.minX).fill(null).reduce<number>((sum, _, offset) => (sum + (map.getPlotValue(offset + map.minX, 10) === PlotType.Nothing ? 0 : 1)), 0));
+  // printMap(map);
+
+  let sum = 0;
+
+  for (let x = map.maxX - map.minX; x < map.maxX + 1; x++) {
+    if (map.getPlotValue(x, 2000000).includes(PlotType.Signal)) {
+      sum++;
+    }
+  }
+
+  console.log(sum);
 })();
