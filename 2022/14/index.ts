@@ -3,8 +3,6 @@
 
 import { readLine } from '../common/readInput';
 
-const wait = async (x: number): Promise<void> => await new Promise((resolve) => setTimeout(resolve, x));
-
 enum Element {
   Rock = '#',
   Sand = 'o',
