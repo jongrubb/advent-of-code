@@ -26,7 +26,7 @@
 	"eslint.packageManager": "pnpm",
 	"editor.formatOnSave": true,
 	"editor.codeActionsOnSave": {
-		"source.fixAll.eslint": true
+		"source.fixAll.eslint": "explicit"
 	},
 	"eslint.workingDirectories": [
 		{
@@ -48,5 +48,12 @@
 		}
 	},
 	"editor.snippetSuggestions": "bottom",
-	"jest.autoRun": "off"
+	"jest.autoRun": "off",
+	"[rust]": {
+		"editor.defaultFormatter": "rust-lang.rust-analyzer",
+		"editor.formatOnSave": true,
+	},
+	"rust-analyzer.linkedProjects": [
+		"./2024/Cargo.toml"
+	]
 }
