@@ -64,7 +64,7 @@ fn process_part2(lists: &mut (Vec<u32>, Vec<u32>)) -> u32 {
 
     let mut right_list_count_map = HashMap::<u32, u32>::new();
 
-    for num in right_list.iter() {
+    for num in right_list {
         match right_list_count_map.get(num) {
             Option::Some(count) => {
                 right_list_count_map.insert(*num, count + 1);
@@ -77,8 +77,8 @@ fn process_part2(lists: &mut (Vec<u32>, Vec<u32>)) -> u32 {
 
     let mut sum: u32 = 0;
 
-    for num in left_list.iter() {
-        sum += num * right_list_count_map.get(num).unwrap_or(&(0));
+    for num in left_list {
+        sum += *num * right_list_count_map.get(num).unwrap_or(&(0));
     }
 
     sum
