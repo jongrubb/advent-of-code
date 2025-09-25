@@ -1,5 +1,3 @@
-use std::fs::remove_dir;
-
 use aoc_runner_derive::aoc;
 
 struct ReportPart1 {
@@ -87,11 +85,6 @@ fn part1(input: &str) -> u32 {
         .sum()
 }
 
-struct ReportSafetyTestResult {
-    pass: bool,
-    removed_count: u8,
-}
-
 struct ReportPart2 {
     values: Vec<u16>,
 }
@@ -109,159 +102,105 @@ impl ReportPart2 {
             .collect()
     }
 
-    fn at_end_of_list(&self, i: usize) -> bool {
-        i == self.values.len() - 2
+    fn get_prev_i(item_removed: Option<usize>, i: usize) -> Option<usize> {
+        match item_removed {
+            Option::Some(i2) if i2 == 0 => None,
+            Option::Some(i2) if i2 == (i - 1) => Some(i2 - 1),
+            _ if i == 0 => None,
+            _ => Some(i - 1),
+        }
+    }
+
+    fn get_next_next_i(&self, i: usize) -> Option<usize> {
+        if i + 2 == self.values.len() {
+            None
+        } else {
+            Some(i + 2)
+        }
+    }
+
+    fn test_values(&self, compare_values: fn(v1: &u16, v2: &u16) -> bool) -> bool {
+        if self.values.len() <= 1 {
+            return true;
+        }
+
+        let mut item_removed: Option<usize> = Option::None;
+
+        for i in 0..self.values.len() - 1 {
+            if item_removed.is_some_and(|item_removed_i| i == item_removed_i) {
+                continue;
+            }
+
+            let prev_i = ReportPart2::get_prev_i(item_removed, i);
+            let next_i = i + 1;
+            let next_next_i = self.get_next_next_i(i);
+
+            let prev = prev_i.and_then(|p_i| self.values.get(p_i));
+            let cur = self.values.get(i).unwrap();
+            let next = self.values.get(next_i).unwrap();
+            let next_next = next_next_i.and_then(|nn_i| self.values.get(nn_i));
+
+            if !(compare_values(cur, next) && ReportPart2::is_within_range(cur, next)) {
+                if item_removed.is_some() {
+                    return false;
+                }
+
+                let is_at_end_of_list = i == self.values.len() - 2;
+
+                if is_at_end_of_list {
+                    return true;
+                }
+
+                // if removing cur
+
+                let is_previous_and_next_valid = prev.is_none()
+                    || prev.is_some_and(|p| {
+                        compare_values(p, next) && ReportPart2::is_within_range(p, next)
+                    });
+                let is_next_and_next_next_valid = next_next.is_some_and(|nn| {
+                    compare_values(next, nn) && ReportPart2::is_within_range(next, nn)
+                });
+
+                if is_previous_and_next_valid && is_next_and_next_next_valid {
+                    item_removed = Some(i);
+                    continue;
+                }
+
+                // if removing next
+                let is_cur_and_next_next_valid = next_next.is_some_and(|nn| {
+                    compare_values(cur, nn) && ReportPart2::is_within_range(cur, nn)
+                });
+
+                if is_cur_and_next_next_valid {
+                    item_removed = Some(i + 1);
+                    continue;
+                }
+
+                return false;
+            }
+        }
+
+        return true;
     }
 
     fn is_ascending(v1: &u16, v2: &u16) -> bool {
-        *v1 > *v2
-    }
-
-    fn are_values_ascending(&self) -> ReportSafetyTestResult {
-        if self.values.len() <= 1 {
-            return ReportSafetyTestResult {
-                pass: true,
-                removed_count: 0,
-            };
-        }
-
-        let mut num_times_removed = 0;
-
-        for i in 0..self.values.len() - 1 {
-            let prev = self.values.get(i - 1);
-            let cur = self.values.get(i).unwrap();
-            let next = self.values.get(i + 1).unwrap();
-
-            if ReportPart2::is_ascending(cur, next) {
-                if prev.is_none()
-                    || prev.is_some_and(|p| ReportPart2::is_ascending(p, next))
-                    || self.at_end_of_list(i)
-                {
-                    num_times_removed += 1;
-                }
-
-                if num_times_removed > 1 {
-                    return ReportSafetyTestResult {
-                        pass: false,
-                        removed_count: num_times_removed,
-                    };
-                }
-            }
-        }
-
-        return ReportSafetyTestResult {
-            pass: true,
-            removed_count: num_times_removed,
-        };
-    }
-
-    fn is_descending(v1: &u16, v2: &u16) -> bool {
         *v1 < *v2
     }
 
-    fn are_vales_descending(&self) -> ReportSafetyTestResult {
-        if self.values.len() <= 1 {
-            return ReportSafetyTestResult {
-                pass: true,
-                removed_count: 0,
-            };
-        }
-
-        let mut num_times_removed = 0;
-
-        for i in 0..self.values.len() - 1 {
-            let prev = self.values.get(i - 1);
-            let cur = self.values.get(i).unwrap();
-            let next = self.values.get(i + 1).unwrap();
-
-            if ReportPart2::is_descending(cur, next) {
-                if prev.is_none()
-                    || prev.is_some_and(|p| ReportPart2::is_descending(p, next))
-                    || self.at_end_of_list(i)
-                {
-                    num_times_removed += 1;
-                }
-
-                if num_times_removed > 1 {
-                    return ReportSafetyTestResult {
-                        pass: false,
-                        removed_count: num_times_removed,
-                    };
-                }
-            }
-        }
-
-        return ReportSafetyTestResult {
-            pass: true,
-            removed_count: num_times_removed,
-        };
+    fn is_descending(v1: &u16, v2: &u16) -> bool {
+        *v1 > *v2
     }
 
-    fn is_within_range(v1: &u16, v2: &u16, min: u16, max: u16) -> bool {
+    fn is_within_range(v1: &u16, v2: &u16) -> bool {
+        const MIN: u16 = 1;
+        const MAX: u16 = 3;
+
         let abs_diff: u16 = (*v1).abs_diff(*v2);
-        min <= abs_diff && abs_diff <= max
+        MIN <= abs_diff && abs_diff <= MAX
     }
 
-    fn values_within_range(&self, min: u16, max: u16) -> ReportSafetyTestResult {
-        if self.values.len() <= 1 {
-            return ReportSafetyTestResult {
-                pass: true,
-                removed_count: 0,
-            };
-        }
-
-        let mut num_times_removed = 0;
-
-        for i in 0..self.values.len() - 1 {
-            let prev = self.values.get(i - 1);
-            let cur = self.values.get(i).unwrap();
-            let next = self.values.get(i + 1).unwrap();
-
-            if !(ReportPart2::is_within_range(cur, next, min, max)) {
-                if prev.is_none()
-                    || prev.is_some_and(|p| ReportPart2::is_within_range(p, next, min, max))
-                    || self.at_end_of_list(i)
-                {
-                    num_times_removed += 1;
-                }
-
-                if num_times_removed > 1 {
-                    return ReportSafetyTestResult {
-                        pass: false,
-                        removed_count: num_times_removed,
-                    };
-                }
-            }
-        }
-
-        return ReportSafetyTestResult {
-            pass: true,
-            removed_count: num_times_removed,
-        };
-    }
-
-    // integrate within range test directly into asc/desc methods instead of returning a test result
-    // does not work right now because we are not verifying if we are removing the same elements.
     fn is_safe(&self) -> bool {
-        let ascending_result = self.are_values_ascending();
-
-        if ascending_result.pass {
-            let within_range_result = self.values_within_range(1, 3);
-
-            return within_range_result.pass
-                && ascending_result.removed_count + within_range_result.removed_count <= 1;
-        }
-
-        let descending_result = self.are_vales_descending();
-
-        if descending_result.pass {
-            let within_range_result = self.values_within_range(1, 3);
-
-            return within_range_result.pass
-                && descending_result.removed_count + within_range_result.removed_count <= 1;
-        }
-
-        return false;
+        self.test_values(ReportPart2::is_ascending) || self.test_values(ReportPart2::is_descending)
     }
 }
 
