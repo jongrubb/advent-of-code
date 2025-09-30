@@ -287,8 +287,6 @@ const MAS: [char; 3] = ['M', 'A', 'S'];
 const SAM: [char; 3] = ['S', 'A', 'M'];
 
 fn is_mas_shaped_x(word_search: &mut WordSearch, word_search_item: &WordSearchItem) -> bool {
-    let mut count: u8 = 0;
-
     let [mas_first_character, mas_rest_word @ ..] = MAS;
     let [sam_first_character, sam_rest_word @ ..] = SAM;
 
