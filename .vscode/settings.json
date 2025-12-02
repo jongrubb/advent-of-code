@@ -54,6 +54,7 @@
 		"editor.formatOnSave": true,
 	},
 	"rust-analyzer.linkedProjects": [
-		"./2024/Cargo.toml"
+		"./2024/Cargo.toml",
+		"./2025/Cargo.toml",
 	]
 }
