@@ -1,6 +1,7 @@
 use std::{
     cmp::{max, min},
     collections::HashSet,
+    panic::{self, catch_unwind},
 };
 
 use aoc_runner_derive::aoc;
@@ -56,31 +57,100 @@ impl Map {
         }
     }
 
-    fn determine_obstacle_to_start(last_obstacle: Option<&Obstacle>) -> Option<Coordinate> {
-        last_obstacle.and_then(|last_obstacle| {
-            if last_obstacle.is_obstacle {
-                Some(last_obstacle.coordinate)
+    fn determine_obstacle_to_start(obstacle_before: Option<&Obstacle>) -> Option<Coordinate> {
+        obstacle_before.and_then(|o| {
+            if o.is_obstacle {
+                Some(o.coordinate)
             } else {
-                last_obstacle.obstacle_to_start
+                o.obstacle_to_start
             }
         })
     }
 
-    fn remap_obstacle_to_end(cols_or_rows: &mut Vec<Obstacle>, current_obstacle: Obstacle) {
-        for i in (0..cols_or_rows.len()).rev() {
-            let obstacle = cols_or_rows.get_mut(i).unwrap();
+    fn determine_obstacle_to_end(obstacle_after: Option<&Obstacle>) -> Option<Coordinate> {
+        obstacle_after.and_then(|o| {
+            if o.is_obstacle {
+                Some(o.coordinate)
+            } else {
+                o.obstacle_to_end
+            }
+        })
+    }
 
-            obstacle.obstacle_to_end = Some(current_obstacle.coordinate);
+    fn remap_obstacle_to_start(
+        cols_or_rows: &mut Vec<Obstacle>,
+        x_or_y: usize,
+        new_obstacle: Obstacle,
+    ) {
+        let current_obstacle = cols_or_rows.get(x_or_y);
 
-            if obstacle.is_obstacle {
-                break;
+        if (current_obstacle.is_none() && new_obstacle.is_obstacle)
+            || current_obstacle.is_some_and(|o| o.is_obstacle != new_obstacle.is_obstacle)
+        {
+            let remapped_cooridinate =
+                if current_obstacle.is_none() || current_obstacle.is_some_and(|o| !o.is_obstacle) {
+                    // if the current_obstacle has not been set or current_obstacle will switch to an obstacle, use new
+                    // obstacle's coordinates
+                    Some(new_obstacle.coordinate)
+                } else {
+                    // current_obstacle is switching to empty; use current_obstacle's obstacle_to_start
+                    current_obstacle.unwrap().obstacle_to_start
+                };
+
+            for i in x_or_y + 1..cols_or_rows.len() {
+                let obstacle = cols_or_rows.get_mut(i).unwrap();
+
+                obstacle.obstacle_to_start = remapped_cooridinate;
+
+                if obstacle.is_obstacle {
+                    break;
+                }
             }
         }
     }
 
-    // This is a very imperfect implementation of adding a coordinate to this map. Since the input file is read left to
-    // right/up to down, there are hefty assumptions made to this method in what the state of the map is in
+    fn remap_obstacle_to_end(
+        cols_or_rows: &mut Vec<Obstacle>,
+        x_or_y: usize,
+        new_obstacle: Obstacle,
+    ) {
+        let current_obstacle = cols_or_rows.get(x_or_y);
+
+        if (current_obstacle.is_none() && new_obstacle.is_obstacle)
+            || current_obstacle.is_some_and(|o| o.is_obstacle != new_obstacle.is_obstacle)
+        {
+            let remapped_cooridinate =
+                if current_obstacle.is_none() || current_obstacle.is_some_and(|o| !o.is_obstacle) {
+                    // if the current_obstacle has not been set or current_obstacle will switch to an obstacle, use new
+                    // obstacle's coordinates
+                    Some(new_obstacle.coordinate)
+                } else {
+                    // current_obstacle is switching to empty; use current_obstacle's obstacle_to_end
+                    current_obstacle.unwrap().obstacle_to_end
+                };
+
+            for i in (0..x_or_y).rev() {
+                let obstacle = cols_or_rows.get_mut(i).unwrap();
+
+                obstacle.obstacle_to_end = remapped_cooridinate;
+
+                if obstacle.is_obstacle {
+                    break;
+                }
+            }
+        }
+    }
+
     fn insert_obstacle(&mut self, x: XCoordinate, y: YCoordinate, is_obstacle: bool) {
+        // if already exists and is_obstacle does not change.
+        if self
+            .rows
+            .get(x)
+            .is_some_and(|cols| cols.get(y).is_some_and(|o| o.is_obstacle == is_obstacle))
+        {
+            return;
+        }
+
         let current_obstacle_coordinate = Coordinate { x, y };
 
         let cols = match self.rows.get_mut(x) {
@@ -91,20 +161,26 @@ impl Map {
             }
         };
 
-        let last_obstacle_option = cols.last();
+        let obstacle_before = cols.get(y - 1);
+        let obstacle_after = cols.get(y + 1);
 
         let current_obstacle = Obstacle {
             coordinate: current_obstacle_coordinate,
-            obstacle_to_start: Map::determine_obstacle_to_start(last_obstacle_option),
-            obstacle_to_end: None,
+            obstacle_to_start: Map::determine_obstacle_to_start(obstacle_before),
+            obstacle_to_end: Map::determine_obstacle_to_end(obstacle_after),
             is_obstacle,
         };
 
-        if is_obstacle {
-            Map::remap_obstacle_to_end(cols, current_obstacle);
+        Map::remap_obstacle_to_end(cols, current_obstacle.coordinate.y, current_obstacle);
+        Map::remap_obstacle_to_start(cols, current_obstacle.coordinate.y, current_obstacle);
+
+        if y < cols.len() {
+            cols.insert(y, current_obstacle);
+        } else {
+            cols.push(current_obstacle);
         }
 
-        cols.push(current_obstacle);
+        //TODO:
 
         let rows = match self.cols.get_mut(y) {
             Some(value) => value,
@@ -114,28 +190,30 @@ impl Map {
             }
         };
 
-        let last_obstacle_option = rows.last();
+        let obstacle_before = rows.get(x - 1);
+        let obstacle_after = rows.get(x + 1);
 
         let current_obstacle = Obstacle {
             coordinate: current_obstacle_coordinate,
-            obstacle_to_start: Map::determine_obstacle_to_start(last_obstacle_option),
-            obstacle_to_end: None,
+            obstacle_to_start: Map::determine_obstacle_to_start(obstacle_before),
+            obstacle_to_end: Map::determine_obstacle_to_end(obstacle_after),
             is_obstacle,
         };
 
-        if is_obstacle {
-            Map::remap_obstacle_to_end(rows, current_obstacle);
-        }
+        Map::remap_obstacle_to_end(rows, current_obstacle.coordinate.x, current_obstacle);
+        Map::remap_obstacle_to_start(rows, current_obstacle.coordinate.x, current_obstacle);
 
-        rows.push(current_obstacle);
+        if x < rows.len() {
+            rows.insert(x, current_obstacle);
+        } else {
+            rows.push(current_obstacle);
+        }
     }
 
     fn add_empty(&mut self, x: XCoordinate, y: YCoordinate) {
         self.insert_obstacle(x, y, false);
     }
 
-    // This is a very imperfect implementation of adding a coordinate to this map. Since the input file is read left to
-    // right/up to down, there are hefty assumptions made to this method in what the state of the map is in
     fn add_obstacle(&mut self, x: XCoordinate, y: YCoordinate) {
         self.insert_obstacle(x, y, true);
     }
@@ -202,19 +280,12 @@ fn parse(input: &str) -> (Map, Coordinate, GuardDirection) {
 fn part1(input: &str) -> usize {
     let (map, gaurd_coordinate, mut gaurd_direction) = parse(input);
 
-    println!();
-
     let mut gaurd_coordinate = Some(gaurd_coordinate);
 
     let mut coordinates_visited: HashSet<Coordinate> = HashSet::new();
 
     while gaurd_coordinate.is_some() {
         let current_gaurd_coordinate = gaurd_coordinate.unwrap();
-
-        println!(
-            "({}, {})",
-            current_gaurd_coordinate.x, current_gaurd_coordinate.y
-        );
 
         let next_gaurd_coordinate_opional = map.get_coordinate_infront_of_obstacle(
             current_gaurd_coordinate.x,
@@ -269,11 +340,13 @@ fn part1(input: &str) -> usize {
 }
 
 #[aoc(day6, part2)]
-fn part2(input: &str) -> String {
-    todo!()
+fn part2(input: &str) -> usize {
+    return 123;
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // TODO: add tests on Map to verify that inserting works as expected
 }
